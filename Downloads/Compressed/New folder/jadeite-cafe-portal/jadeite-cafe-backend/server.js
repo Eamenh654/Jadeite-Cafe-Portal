@@ -265,7 +265,7 @@ app.get('/api/orders/active', (req, res) => {
 });
 
 app.get('/api/orders/completed', (req, res) => {
-    const orders = db.prepare("SELECT id FROM orders WHERE status = 'delivered' ORDER BY created_at DESC LIMIT 15").all();
+    const orders = db.prepare("SELECT id FROM orders WHERE status = 'delivered' AND date(created_at) = date('now') ORDER BY created_at DESC").all();
     const fullOrders = orders.map(o => getFullOrder(o.id));
     res.json(fullOrders);
 });
