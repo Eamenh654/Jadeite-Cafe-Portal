@@ -84,14 +84,26 @@ app.post('/api/login', (req, res) => {
 
 // --- Menu Routes ---
 app.get('/api/products', (req, res) => {
+    // Determine current host for rewriting old URLs
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'http';
+    const host = req.headers['x-forwarded-host'] || req.get('host') || 'localhost:3001';
+    const dynamicBaseUrl = process.env.RENDER_EXTERNAL_URL || process.env.API_URL || `${protocol}://${host}`;
+    const cleanBaseUrl = dynamicBaseUrl.replace(/\/+$/, '');
+
     const products = db.prepare('SELECT * FROM products').all();
     const productsWithVariants = products.map(p => {
+        // Automatically rewrite old localhost URLs in the database to the live server URL
+        let imageUrl = p.image_url;
+        if (imageUrl && imageUrl.includes('http://localhost:3001')) {
+            imageUrl = imageUrl.replace('http://localhost:3001', cleanBaseUrl);
+        }
+
         const variants = db.prepare('SELECT * FROM product_variants WHERE product_id = ?').all(p.id);
         const variantsWithOptions = variants.map(v => {
             const options = db.prepare('SELECT * FROM variant_options WHERE variant_id = ?').all(v.id);
             return { ...v, options };
         });
-        return { ...p, variants: variantsWithOptions };
+        return { ...p, image_url: imageUrl, variants: variantsWithOptions };
     });
     res.json(productsWithVariants);
 });
