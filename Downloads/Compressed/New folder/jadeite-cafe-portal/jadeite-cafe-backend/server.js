@@ -82,6 +82,29 @@ app.post('/api/login', (req, res) => {
     res.json({ token, user: { id: user.id, username: user.username, role: user.role, location: user.location } });
 });
 
+// --- User Management Routes ---
+app.get('/api/users', (req, res) => {
+    // Only return non-sensitive fields
+    const users = db.prepare('SELECT id, username, role, location FROM users').all();
+    res.json(users);
+});
+
+app.patch('/api/users/:id/password', (req, res) => {
+    const { id } = req.params;
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ error: 'Password required' });
+    
+    const hashedPassword = bcrypt.hashSync(password, 10);
+    db.prepare('UPDATE users SET password = ? WHERE id = ?').run(hashedPassword, id);
+    res.json({ success: true });
+});
+
+app.delete('/api/users/:id', (req, res) => {
+    const { id } = req.params;
+    db.prepare('DELETE FROM users WHERE id = ?').run(id);
+    res.json({ success: true });
+});
+
 // --- Menu Routes ---
 app.get('/api/products', (req, res) => {
     // Determine current host for rewriting old URLs
